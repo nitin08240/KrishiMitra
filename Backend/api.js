@@ -33,10 +33,12 @@ app.use(cookieParser());
 /**************auth ke methods and route************/
 const authRouter = require("./router/authRouter.js");
 const userRouter = require("./router/userRouter.js");
+const chatbotRouter = require("./api/chatbot.js");
 
 
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
+app.use("/api/chat", chatbotRouter);
 
 
 

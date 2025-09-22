@@ -1,8 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { Send, Mic, Image, Bot, User } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -14,28 +10,26 @@ interface Message {
 const ChatBox = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
-      text: 'नमस्ते! मैं आपका कृषि सलाहकार हूं। आप मुझसे फसल, मौसम, या कृषि से संबंधित कोई भी प्रश्न पूछ सकते हैं।',
+      id: 'welcome',
+      text: `Hello! I am your AI assistant. Please ask any question related to agriculture, government schemes, weather, or mandi prices in India.`,
       sender: 'bot',
       timestamp: new Date(),
     }
   ]);
   const [inputText, setInputText] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isLoading]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!inputText.trim()) return;
 
+    setIsLoading(true);
     const userMessage: Message = {
       id: Date.now().toString(),
       text: inputText,
@@ -46,135 +40,105 @@ const ChatBox = () => {
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
 
-    // Simulate bot response (replace with actual API call)
-    setTimeout(() => {
-      const botResponse: Message = {
+    try {
+      const res = await fetch('http://localhost:3000/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMessage.text }),
+      });
+      const data = await res.json();
+      const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: 'धन्यवाद आपके प्रश्न के लिए। मैं आपकी जानकारी को प्रोसेस कर रहा हूं और जल्द ही विस्तृत सलाह देूंगा। कृपया कुछ क्षण रुकें।',
+        text: data.reply || "Sorry, I could not generate a response.",
         sender: 'bot',
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, botResponse]);
-    }, 1000);
+      setMessages(prev => [...prev, botMessage]);
+    } catch (e) {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: (Date.now() + 2).toString(),
+          text: "Sorry, the service is currently unavailable.",
+          sender: 'bot',
+          timestamp: new Date(),
+        }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  const handleVoiceInput = () => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      setIsRecording(!isRecording);
-      // Add voice recognition logic here
-    } else {
-      alert('Voice recognition is not supported in this browser.');
-    }
-  };
-
-  const handleImageUpload = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Handle image upload for pest detection
-      console.log('Image uploaded:', file.name);
-      const imageMessage: Message = {
-        id: Date.now().toString(),
-        text: `📷 Image uploaded: ${file.name} (Pest detection feature coming soon!)`,
-        sender: 'user',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, imageMessage]);
+      handleSendMessage(e as any);
     }
   };
 
   return (
-    <Card className="h-[600px] flex flex-col">
-      {/* Chat Header */}
-      <div className="p-4 border-b bg-primary text-primary-foreground rounded-t-lg">
-        <div className="flex items-center space-x-2">
-          <Bot className="h-6 w-6" />
-          <div>
-            <h3 className="font-semibold">AI कृषि सलाहकार</h3>
-            <p className="text-sm opacity-90">Online • Ready to help</p>
+    <div className="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-sans h-screen p-4 flex flex-col items-center">
+      <div className="w-full max-w-2xl">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 h-[85vh] flex flex-col">
+          {/* Chat Header */}
+          <div className="p-4 border-b bg-green-600 text-white rounded-t-xl flex items-center space-x-2">
+            <h3 className="font-semibold text-lg">AI Agriculture Assistant</h3>
           </div>
-        </div>
-      </div>
-
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[80%] rounded-lg p-3 ${
-                message.sender === 'user'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground'
-              }`}
-            >
-              <div className="flex items-start space-x-2">
-                {message.sender === 'bot' && <Bot className="h-4 w-4 mt-0.5 flex-shrink-0" />}
-                {message.sender === 'user' && <User className="h-4 w-4 mt-0.5 flex-shrink-0" />}
-                <div className="flex-1">
-                  <p className="text-sm">{message.text}</p>
-                  <p className={`text-xs mt-1 ${
-                    message.sender === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground/70'
-                  }`}>
-                    {message.timestamp.toLocaleTimeString()}
-                  </p>
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            {messages.map((message) => (
+              <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-[80%] rounded-xl p-3 shadow-md ${
+                    message.sender === 'user'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                  }`}
+                >
+                  <div className="flex-1">
+                    <p className="text-sm">{message.text}</p>
+                    <p className={`text-xs mt-1 opacity-70`}>
+                      {message.timestamp.toLocaleTimeString()}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="max-w-[80%] rounded-xl p-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+                  <span>Typing...</span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Area */}
-      <div className="p-4 border-t">
-        <div className="flex space-x-2">
-          <Input
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="अपना प्रश्न यहाँ लिखें... (Type your question here...)"
-            className="flex-1"
-          />
-          <Button
-            onClick={handleVoiceInput}
-            variant="outline"
-            size="icon"
-            className={isRecording ? 'bg-destructive text-destructive-foreground' : ''}
-          >
-            <Mic className="h-4 w-4" />
-          </Button>
-          <Button onClick={handleImageUpload} variant="outline" size="icon">
-            <Image className="h-4 w-4" />
-          </Button>
-          <Button onClick={handleSendMessage} size="icon">
-            <Send className="h-4 w-4" />
-          </Button>
+          {/* Input Area */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            <form onSubmit={handleSendMessage} className="flex space-x-2">
+              <input
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your question here..."
+                className="flex-1 p-3 rounded-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                disabled={isLoading}
+              />
+              <button
+                type="submit"
+                className="p-3 rounded-full shadow-lg bg-green-600 hover:bg-green-700 text-white transition-colors duration-300"
+                disabled={isLoading}
+              >
+                Send
+              </button>
+            </form>
+            <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-2">
+              You can ask questions in English about agriculture, government schemes, weather, or mandi prices.
+            </p>
+          </div>
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-        <p className="text-xs text-muted-foreground mt-2">
-          आप हिंदी या अंग्रेजी में प्रश्न पूछ सकते हैं। आवाज़ या तस्वीर भी भेज सकते हैं।
-        </p>
       </div>
-    </Card>
+    </div>
   );
 };
 

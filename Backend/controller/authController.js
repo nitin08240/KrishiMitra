@@ -1,5 +1,3 @@
-
-
 const UserModel = require("../model/userModel");
 const util = require("util");
 const jwt = require("jsonwebtoken");
@@ -12,45 +10,6 @@ const jwtVerify = promisify(jwt.verify);
 // ✅ Use a single JWT secret everywhere
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
 
-// ===================== Signup Handler =====================
-// async function signupHandler(req, res) {
-//   try {
-//     const userObject = req.body;
-//     const { email, password, role } = req.body;
-
-//     if (!email || !password) {
-//       return res.status(400).json({ message: "Email and password are required", status: "failure" });
-//     }
-
-//     const existingUser = await UserModel.findOne({ email });
-//     if (existingUser) {
-//       return res.status(400).json({ message: "User already exists", status: "failure" });
-//     }
-
-//     // Hash the password before saving
-//     // const hashedPassword = await bcrypt.hash(password, 12);
-
-//     // delete userObject.confirmPassword;
-//     // const newUser = await UserModel.create(userObject);
-//     // const newUser = await UserModel.create({ email, password: hashedPassword, role: role || "user" });
-//     // ...existing code...
-//     const hashedPassword = await bcrypt.hash(password, 12);
-//     userObject.password = hashedPassword; // Yeh line add karein
-//     delete userObject.confirmPassword;
-//     const newUser = await UserModel.create(userObject);
-//     // ...existing code...
-
-
-//     res.status(201).json({
-//       message: "User signed up successfully",
-//       user: { email: newUser.email, role: newUser.role, _id: newUser._id },
-//       status: "success",
-//     });
-//   } catch (err) {
-//     console.error("Signup error:", err);
-//     res.status(500).json({ message: err.message, status: "failure" });
-//   }
-// }
 
 async function signupHandler(req, res) {
   try {
@@ -95,30 +54,90 @@ async function signupHandler(req, res) {
 }
 
 // ===================== Login Handler =====================
+// async function loginHandler(req, res) {
+//   try {
+//     const { email, password } = req.body;
+
+//     const user = await UserModel.findOne({ email: req.body.email });
+//     // if (!user) {
+//     //   return res.status(404).json({ message: "Invalid email or password", status: "failure" });
+//     // }
+
+//     if (!user) return res.status(401).json({ message: "User not found" });
+//     const isMatch = await bcrypt.compare(req.body.password, user.password);
+//     if (!isMatch) return res.status(401).json({ message: "Invalid password" });
+
+//     // // Compare password using bcrypt
+//     // const isPasswordValid = await bcrypt.compare(password, user.password);
+//     // if (!isPasswordValid) {
+//     //   return res.status(400).json({ message: "Invalid email or password", status: "failure" });
+//     // }
+
+//     // Create JWT token
+//     const token = await jwtSign({ id: user._id }, JWT_SECRET, { expiresIn: "1d" });
+
+//     // Set cookie
+//     res.cookie("jwt", token, {
+//       maxAge: 1000 * 60 * 60 * 24,
+//       httpOnly: true,
+//       secure: false, // set to true only in production with HTTPS
+//       sameSite: "lax", // change from "strict" to "lax"
+//     });
+
+//     res.status(200).json({
+//       message: "Login successful",
+//       status: "success",
+//       user: { email: user.email, role: user.role, _id: user._id },
+//     });
+//   } catch (err) {
+//     console.error("Login error:", err);
+//     res.status(500).json({ message: err.message, status: "failure" });
+//   }
+// }
+// async function loginHandler(req, res) {
+//   try {
+//     const { email, password } = req.body;
+
+//     const user = await UserModel.findOne({ email });
+//     if (!user) return res.status(401).json({ message: "User not found" });
+//     const isMatch = await bcrypt.compare(password, user.password);
+//     if (!isMatch) return res.status(401).json({ message: "Invalid password" });
+
+//     const token = await jwtSign({ id: user._id }, JWT_SECRET, { expiresIn: "1d" });
+
+//     res.cookie("jwt", token, {
+//       maxAge: 1000 * 60 * 60 * 24,
+//       httpOnly: true,
+//       secure: false,
+//       sameSite: "lax",
+//     });
+
+//     res.status(200).json({
+//       message: "Login successful",
+//       status: "success",
+//       user: { email: user.email, password:user.password, _id: user._id },
+//     });
+//   } catch (err) {
+//     console.error("Login error:", err);
+//     res.status(500).json({ message: err.message, status: "failure" });
+//   }
+// }
+
 async function loginHandler(req, res) {
   try {
     const { email, password } = req.body;
-
     const user = await UserModel.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: "Invalid email or password", status: "failure" });
-    }
+    if (!user) return res.status(401).json({ message: "User not found", status: "failure" });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: "Invalid password", status: "failure" });
 
-    // Compare password using bcrypt
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(400).json({ message: "Invalid email or password", status: "failure" });
-    }
-
-    // Create JWT token
     const token = await jwtSign({ id: user._id }, JWT_SECRET, { expiresIn: "1d" });
 
-    // Set cookie
     res.cookie("jwt", token, {
       maxAge: 1000 * 60 * 60 * 24,
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: false, // true in production with HTTPS
+      sameSite: "lax",
     });
 
     res.status(200).json({
@@ -127,27 +146,12 @@ async function loginHandler(req, res) {
       user: { email: user.email, role: user.role, _id: user._id },
     });
   } catch (err) {
-    console.error("Login error:", err);
     res.status(500).json({ message: err.message, status: "failure" });
   }
 }
 
-// const handleLogin = async (e) => {
-//   e.preventDefault();
-//   setIsLoading(true);
-//   setErrorMsg(null);
-//   try {
-//     const res = await signIn(loginData.email, loginData.password); // useAuth context
-//     if (!res.error) {
-//       navigate("/dashboard");
-//     } else {
-//       setErrorMsg(res.error);
-//     }
-//   } catch (err) {
-//     setErrorMsg("Unexpected error occurred during login.");
-//   }
-//   setIsLoading(false);
-// };
+
+
 
 // ===================== Protect Route Middleware =====================
 async function protectRouteMiddleware(req, res, next) {
@@ -182,32 +186,45 @@ async function protectRouteMiddleware(req, res, next) {
 // }
 
 // ===================== Profile Handler =====================
+// async function profileHandler(req, res) {
+//   try {
+//     const userId = req.id;
+//     const user = await UserModel.findById(userId);
+//     if (!user) {
+//       return res.status(404).json({
+//         message: "user not found",
+//         status: "failure"
+//       });
+//     }
+//     res.json({
+//       status: "success",
+//       user: {
+//         name: user.name,
+//         district: user.district,
+//         state: user.state,
+//         email: user.email,
+//         phone: user.phone,
+//         _id: user._id
+//       }
+//     });
+//   } catch (err) {
+//     res.status(500).json({
+//       message: err.message,
+//       status: "failure"
+//     });
+//   }
+// }
+
 async function profileHandler(req, res) {
   try {
-    const userId = req.id;
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        message: "user not found",
-        status: "failure"
-      });
-    }
-    res.json({
-      status: "success",
-      user: {
-        name: user.name,
-        district: user.district,
-        state: user.state,
-        email: user.email,
-        phone: user.phone,
-        _id: user._id
-      }
-    });
+    const token = req.cookies.jwt;
+    if (!token) return res.status(401).json({ message: "Unauthorized", status: "failure" });
+    const decoded = await jwtVerify(token, JWT_SECRET);
+    const user = await UserModel.findById(decoded.id);
+    if (!user) return res.status(404).json({ message: "User not found", status: "failure" });
+    res.status(200).json({ status: "success", user });
   } catch (err) {
-    res.status(500).json({
-      message: err.message,
-      status: "failure"
-    });
+    res.status(401).json({ message: "Unauthorized", status: "failure" });
   }
 }
 

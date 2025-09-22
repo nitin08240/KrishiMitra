@@ -132,15 +132,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         return { error: res.data.message };
       }
-    } catch (error: any) {
-      toast({
-        title: 'Login Failed',
-        description: error.response?.data?.message || error.message,
-        variant: 'destructive',
-      });
-      setLoading(false);
-      return { error };
-    }
+    } 
+    catch (error: any) {
+    return { error: error?.response?.data?.message || "Login failed" };
+  }
+    
+    
+    
+    // catch (error: any) {
+    //   toast({
+    //     title: 'Login Failed',
+    //     description: error.response?.data?.message || error.message,
+    //     variant: 'destructive',
+    //   });
+    //   setLoading(false);
+    //   return { error };
+    // }
   };
 
   const signOut = async () => {
